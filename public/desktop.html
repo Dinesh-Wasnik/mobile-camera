@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head><title>Desktop Viewer</title></head>
+<body>
+  <h1>Desktop Camera Stream</h1>
+  <video id="remoteVideo" autoplay playsinline muted></video>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io('https://10.10.13.89:8445', {
+      secure: true,
+      rejectUnauthorized: false  // for self-signed certs only
+    });
+
+    const remoteVideo = document.getElementById('remoteVideo');
+    const peer = new RTCPeerConnection();
+
+    peer.ontrack = (event) => {
+      console.log('Got track');
+      remoteVideo.srcObject = event.streams[0];
+    };
+
+    peer.onicecandidate = ({ candidate }) => {
+      if (candidate) socket.emit('candidate', candidate);
+    };
+
+    socket.on('offer', async (offer) => {
+      try {
+        console.log('Received offer');
+        await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        socket.emit('answer', answer);
+        console.log('Sent answer');
+      } catch (err) {
+        console.error('Offer error:', err);
+      }
+    });
+
+    socket.on('candidate', (candidate) => {
+      if (candidate) {
+        peer.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+  </script>
+</body>
+</html>

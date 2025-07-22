@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head><title>Mobile Camera</title></head>
+<body>
+    <h1>Mobile Camera Stream</h1>
+  <video id="localVideo" autoplay muted playsinline></video>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const localVideo = document.getElementById('localVideo');
+    const peer = new RTCPeerConnection();
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } }, audio: false })
+          .then(stream => {
+            localVideo.srcObject = stream;
+            stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        
+            peer.createOffer().then(offer => {
+              peer.setLocalDescription(offer);
+              socket.emit('offer', offer);
+            });
+          })
+        .catch(error => {
+            console.error('Camera access failed:', error);
+            alert('Camera error: ' + error.message);
+        });
+    }else {
+        alert('getUserMedia is not supported in this browser or insecure context.');
+    }
+
+
+    socket.on('answer', async (answer) => {
+      await peer.setRemoteDescription(answer);
+    });
+
+    socket.on('candidate', (candidate) => {
+      peer.addIceCandidate(candidate);
+    });
+
+    peer.onicecandidate = ({ candidate }) => {
+      if (candidate) socket.emit('candidate', candidate);
+    };
+  </script>
+</body>
+</html>

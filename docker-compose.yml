@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    image: app-image   
+    ports:
+      - "8445:8443"  # Expose HTTPS port
+    volumes:
+      - ./:/app
+      - /app/node_modules  # Ignore host's node_modules
+    networks:
+      - webcam-net
+    restart: unless-stopped
+
+networks:
+  webcam-net:
+    driver: bridge

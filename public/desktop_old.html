@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>Desktop Viewer</title></head>
+<body>
+    <h1>Desktop Camera Stream</h1>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const remoteVideo = document.getElementById('remoteVideo');
+    const peer = new RTCPeerConnection();
+
+    socket.on('offer', async (offer) => {
+      await peer.setRemoteDescription(offer);
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      socket.emit('answer', answer);
+    });
+
+    socket.on('candidate', (candidate) => {
+      peer.addIceCandidate(candidate);
+    });
+
+    peer.ontrack = (event) => {
+      remoteVideo.srcObject = event.streams[0];
+    };
+
+    peer.onicecandidate = ({ candidate }) => {
+      if (candidate) socket.emit('candidate', candidate);
+    };
+  </script>
+</body>
+</html>
